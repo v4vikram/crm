@@ -1,6 +1,7 @@
 const User = require('../models/auth.model');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const ApiError = require('../utils/ApiError');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -9,56 +10,62 @@ const generateToken = (id) => {
     });
 };
 
-// Register Service
+// REGISTER USER
 const registerUser = async (userData) => {
-    const { name, email, password, role } = userData;
+    const { name, email, password } = userData;
 
-    const userExists = await User.findOne({ email });
-
-    if (userExists) {
-        throw new Error('User already exists');
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+        throw new ApiError(409, 'User already exists');
     }
 
+    // Create user with safe default role
     const user = await User.create({
         name,
         email,
         password,
-        role, // In a real app, you might want to restrict role creation
+        role: 'staff', // ✅ Prevent role abuse
     });
 
-    if (user) {
-        return {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            token: generateToken(user._id),
-        };
-    } else {
-        throw new Error('Invalid user data');
+    if (!user) {
+        throw new ApiError(400, 'Invalid user data');
     }
+
+    return {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: generateToken(user._id),
+    };
 };
 
-// Login Service
+// LOGIN USER
 const loginUser = async (email, password) => {
     const user = await User.findOne({ email });
 
-    if (user && (await user.matchPassword(password))) {
-        return {
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            token: generateToken(user._id),
-        };
-    } else {
-        throw new Error('Invalid email or password');
+    if (!user) {
+        throw new ApiError(401, 'Invalid email or password');
     }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+        throw new ApiError(401, 'Invalid email or password');
+    }
+
+    return {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: generateToken(user._id),
+    };
 };
 
-// Get All Staff
+// GET ALL STAFF (Admin use)
 const getAllStaff = async () => {
-    return await User.find({ role: 'staff' }).select('_id name email');
+    return User.find({ role: 'staff' }).select('_id name email');
 };
 
 module.exports = {
