@@ -1,5 +1,23 @@
 const mongoose = require('mongoose');
 
+const noteSchema = new mongoose.Schema(
+    {
+        text: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
 const leadSchema = new mongoose.Schema(
     {
         name: {
@@ -29,6 +47,7 @@ const leadSchema = new mongoose.Schema(
             ref: 'User',
             required: true,
         },
+        notes: [noteSchema],
     },
     {
         timestamps: true,

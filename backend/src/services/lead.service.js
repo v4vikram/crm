@@ -1,4 +1,5 @@
 const Lead = require('../models/lead.model');
+const User = require('../models/auth.model');
 const ApiError = require('../utils/ApiError');
 
 // CREATE LEAD
@@ -115,6 +116,71 @@ const deleteLead = async (id, user) => {
 
     return { message: 'Lead removed successfully' };
 };
+/**
+ * Assign lead to staff (Admin only)
+ */
+const assignLead = async (leadId, staffId, currentUser) => {
+    // Ensure admin
+    if (currentUser.role !== 'admin') {
+        throw new ApiError(403, 'Access denied');
+    }
+
+    // Find lead
+    const lead = await Lead.findById(leadId);
+    if (!lead) {
+        throw new ApiError(404, 'Lead not found');
+    }
+
+    // Find staff
+    const staff = await User.findOne({ _id: staffId, role: 'staff' });
+    if (!staff) {
+        throw new ApiError(404, 'Staff not found');
+    }
+
+    // Assign lead
+    lead.assignedTo = staff._id;
+    await lead.save();
+
+    return {
+        message: 'Lead assigned successfully',
+        leadId: lead._id,
+        assignedTo: staff._id,
+    };
+};
+
+/**
+ * Add note to a lead
+ * Admin → any lead
+ * Staff → only assigned lead
+ */
+const addNoteToLead = async (leadId, noteText, currentUser) => {
+    const lead = await Lead.findById(leadId);
+
+    if (!lead) {
+        throw new ApiError(404, 'Lead not found');
+    }
+
+    // Staff access check
+    if (
+        currentUser.role === 'staff' &&
+        (!lead.assignedTo || lead.assignedTo.toString() !== currentUser.id)
+    ) {
+        throw new ApiError(403, 'You are not allowed to add notes to this lead');
+    }
+
+    // Add note
+    lead.notes.push({
+        text: noteText,
+        createdBy: currentUser.id,
+    });
+
+    await lead.save();
+
+    return {
+        message: 'Note added successfully',
+        notes: lead.notes,
+    };
+};
 
 module.exports = {
     createLead,
@@ -122,4 +188,6 @@ module.exports = {
     getLeadById,
     updateLead,
     deleteLead,
+    assignLead,
+    addNoteToLead,
 };

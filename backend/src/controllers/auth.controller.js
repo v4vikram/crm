@@ -18,12 +18,4 @@ const login = asyncHandler(async (req, res) => {
     res.json(user);
 });
 
-// @desc Get staff
-// @route GET /api/auth/staff
-// @access Admin
-const getStaff = asyncHandler(async (req, res) => {
-    const staff = await authService.getAllStaff();
-    res.json(staff);
-});
-
-module.exports = { register, login, getStaff };
+module.exports = { register, login };

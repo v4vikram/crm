@@ -63,13 +63,8 @@ const loginUser = async (email, password) => {
     };
 };
 
-// GET ALL STAFF (Admin use)
-const getAllStaff = async () => {
-    return User.find({ role: 'staff' }).select('_id name email');
-};
 
 module.exports = {
     registerUser,
     loginUser,
-    getAllStaff,
 };

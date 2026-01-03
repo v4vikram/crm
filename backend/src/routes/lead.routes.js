@@ -12,4 +12,7 @@ router.route('/:id')
     .put(protect, adminOnly, leadController.updateLead)
     .delete(protect, adminOnly, leadController.deleteLead);
 
+router.put('/:id/assign', protect, adminOnly, leadController.assignLead);
+router.post('/:id/notes', protect, leadController.addLeadNote);
+
 module.exports = router;
