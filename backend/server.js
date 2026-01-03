@@ -5,10 +5,7 @@ const morgan = require('morgan');
 const mongoose = require('mongoose');
 const config = require('./src/config');
 const { errorHandler } = require('./src/middlewares/errorMiddleware');
-
-// Import Routes
-const authRoutes = require('./src/routes/auth.routes');
-const leadRoutes = require('./src/routes/lead.routes');
+const routes = require('./src/routes');
 
 const app = express();
 
@@ -19,8 +16,7 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/leads', leadRoutes);
+app.use('/api', routes);
 
 // Error Handling
 app.use(errorHandler);

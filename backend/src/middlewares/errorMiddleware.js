@@ -1,3 +1,5 @@
+const config = require("../config");
+
 const errorHandler = (err, req, res, next) => {
     let statusCode = err.statusCode || 500;
     let message = err.message || 'Internal Server Error';
@@ -22,7 +24,7 @@ const errorHandler = (err, req, res, next) => {
     }
 
     // Log only in dev
-    if (process.env.NODE_ENV !== 'production') {
+    if (config.env !== 'production') {
         console.error(err);
     }
 
@@ -30,7 +32,7 @@ const errorHandler = (err, req, res, next) => {
         success: false,
         message,
         errors,
-        ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
+        ...(config.env !== 'production' && { stack: err.stack }),
     });
 };
 
