@@ -5,6 +5,8 @@ import Layout from './layout/Layout';
 import Leads from './pages/Leads';
 import useAuthStore from './features/auth/authStore';
 
+import Staff from './pages/Staff';
+
 function App() {
   const { isAuthenticated } = useAuthStore();
 
@@ -17,6 +19,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/leads" />} />
           <Route path="/leads" element={<Leads />} />
+          <Route path="/staff" element={<Staff />} />
         </Route>
       </Routes>
     </BrowserRouter>

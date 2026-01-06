@@ -3,19 +3,46 @@ import useLeadStore from '../features/leads/leadStore';
 import useAuthStore from '../features/auth/authStore';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Plus, Trash2, Edit, Search } from 'lucide-react';
+import { Plus, Trash2, Edit, Search, Eye, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../lib/axios';
-import { useFormik } from 'formik';
+
 import { LeadSchema } from '../lib/validation';
+import useStaffStore from '../features/staff/staffStore';
+import SearchBar from '../components/SearchBar';
+import Table from '../components/Table';
+import DynamicFormModal from '../components/DynamicFormModal';
+import DynamicViewModal from '../components/DynamicViewModal';
 
 const Leads = () => {
-    const { leads, fetchLeads, isLoading, deleteLead, createLead, updateLead } = useLeadStore();
+    const { leads, fetchLeads, isLoading, deleteLead, createLead, updateLead, page, totalPages, addNote } = useLeadStore();
+    const { staff, fetchStaff } = useStaffStore();
     const { user } = useAuthStore();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [staffList, setStaffList] = useState([]);
     const [editingId, setEditingId] = useState(null);
+    const [viewingId, setViewingId] = useState(null);
+    const [newNote, setNewNote] = useState('');
+    const [modalInitialValues, setModalInitialValues] = useState(null);
+
+    const viewingLead = leads.find(l => l._id === viewingId);
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            fetchLeads({ search, page: newPage });
+        }
+    };
+
+    const handleAddNote = async (e) => {
+        e.preventDefault();
+        if (!newNote.trim()) return;
+        try {
+            await addNote(viewingId, newNote);
+            setNewNote('');
+            toast.success('Note added');
+        } catch (error) {
+            toast.error('Failed to add note');
+        }
+    };
 
     useEffect(() => {
         fetchLeads({ search });
@@ -23,50 +50,34 @@ const Leads = () => {
 
     useEffect(() => {
         if (user.role === 'admin') {
-            const fetchStaff = async () => {
-                try {
-                    const { data } = await api.get('/auth/staff');
-                    setStaffList(data);
-                } catch (error) {
-                    console.error("Failed to fetch staff");
-                }
-            };
             fetchStaff();
         }
     }, [user.role]);
 
-    const formik = useFormik({
-        initialValues: {
-            name: '',
-            email: '',
-            phone: '',
-            status: 'New',
-            assignedTo: ''
-        },
-        validationSchema: LeadSchema,
-        onSubmit: async (values, { resetForm }) => {
-            try {
-                // Handle empty assignedTo for staff
-                const submitValues = { ...values };
-                if (!submitValues.assignedTo) {
-                    submitValues.assignedTo = null;
-                }
 
-                if (editingId) {
-                    await updateLead(editingId, submitValues);
-                    toast.success('Lead updated');
-                } else {
-                    await createLead(submitValues);
-                    toast.success('Lead created');
-                }
-                setIsModalOpen(false);
-                resetForm();
-                setEditingId(null);
-            } catch (error) {
-                toast.error(editingId ? 'Failed to update' : 'Failed to create');
+
+    const handleFormSubmit = async (values, { resetForm }) => {
+        try {
+            // Handle empty assignedTo for staff
+            const submitValues = { ...values };
+            if (!submitValues.assignedTo) {
+                submitValues.assignedTo = null;
             }
-        },
-    });
+
+            if (editingId) {
+                await updateLead(editingId, submitValues);
+                toast.success('Lead updated');
+            } else {
+                await createLead(submitValues);
+                toast.success('Lead created');
+            }
+            setIsModalOpen(false);
+            resetForm();
+            setEditingId(null);
+        } catch (error) {
+            toast.error(editingId ? 'Failed to update' : 'Failed to create');
+        }
+    };
 
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure?')) {
@@ -80,7 +91,7 @@ const Leads = () => {
     };
 
     const openEdit = (lead) => {
-        formik.setValues({
+        setModalInitialValues({
             name: lead.name,
             email: lead.email,
             phone: lead.phone,
@@ -92,10 +103,129 @@ const Leads = () => {
     };
 
     const openNew = () => {
-        formik.resetForm();
+        setModalInitialValues({
+            name: '',
+            email: '',
+            phone: '',
+            status: 'New',
+            assignedTo: ''
+        });
         setEditingId(null);
         setIsModalOpen(true);
     };
+
+    const columns = [
+        {
+            header: 'Name',
+            render: (lead) => <div className="text-sm font-medium text-gray-900">{lead.name}</div>
+        },
+        {
+            header: 'Contact',
+            render: (lead) => (
+                <>
+                    <div className="text-sm text-gray-500">{lead.email}</div>
+                    <div className="text-sm text-gray-500">{lead.phone}</div>
+                </>
+            )
+        },
+        {
+            header: 'Status',
+            render: (lead) => (
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
+                    ${lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                        lead.status === 'Closed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                    {lead.status}
+                </span>
+            )
+        },
+        {
+            header: 'Assigned To',
+            render: (lead) => (
+                <div className="text-sm text-gray-500">
+                    {lead.assignedTo?.name || 'Unassigned'}
+                </div>
+            )
+        },
+        {
+            header: 'Actions',
+            className: 'text-right',
+            headerClassName: 'text-right',
+            render: (lead) => (
+                <div className="flex justify-end">
+                    <button onClick={() => setViewingId(lead._id)} className="text-gray-600 hover:text-gray-900 mr-4">
+                        <Eye className="h-4 w-4" />
+                    </button>
+                    {user.role === 'admin' && (
+                        <>
+                            <button onClick={() => openEdit(lead)} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                                <Edit className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleDelete(lead._id)} className="text-red-600 hover:text-red-900">
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        </>
+                    )}
+                </div>
+            )
+        }
+    ];
+
+    // Form Configuration
+    const formFields = [
+        { name: 'name', label: 'Name', placeholder: 'Name' },
+        { name: 'email', label: 'Email', type: 'email', placeholder: 'Email' },
+        { name: 'phone', label: 'Phone', placeholder: 'Phone' },
+        {
+            name: 'status',
+            label: 'Status',
+            type: 'select',
+            options: [
+                { value: 'New', label: 'New' },
+                { value: 'Contacted', label: 'Contacted' },
+                { value: 'Qualified', label: 'Qualified' },
+                { value: 'Lost', label: 'Lost' },
+                { value: 'Closed', label: 'Closed' }
+            ]
+        }
+    ];
+
+    if (user.role === 'admin') {
+        formFields.push({
+            name: 'assignedTo',
+            label: 'Assign To Staff',
+            type: 'select',
+            options: [
+                { value: '', label: 'Unassigned' },
+                ...staff.map(s => ({ value: s._id, label: s.name }))
+            ]
+        });
+    }
+
+    // View Modal Configuration
+    const viewConfig = [
+        { label: 'Email', key: 'email' },
+        { label: 'Contact', key: 'phone' },
+        {
+            label: 'Status',
+            render: (lead) => (
+                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
+                    ${lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
+                        lead.status === 'Closed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                    {lead.status}
+                </span>
+            )
+        },
+        {
+            label: 'Assigned To',
+            render: (lead) => lead.assignedTo?.name || 'Unassigned'
+        },
+        {
+            label: 'Created At',
+            render: (lead) => new Date(lead.createdAt).toLocaleDateString()
+        }
+    ];
 
     return (
         <div className="space-y-6">
@@ -111,163 +241,73 @@ const Leads = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-                <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input
-                        placeholder="Search leads..."
-                        className="pl-9"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
+                <SearchBar search={search} setSearch={setSearch} />
             </div>
 
-            {isLoading ? (
-                <div className="text-center py-10">Loading...</div>
-            ) : (
-                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                                {user.role === 'admin' && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>}
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {leads.map((lead) => (
-                                <tr key={lead._id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{lead.name}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-gray-500">{lead.email}</div>
-                                        <div className="text-sm text-gray-500">{lead.phone}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
-                        ${lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                                                lead.status === 'Closed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                            }`}>
-                                            {lead.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {lead.assignedTo?.name || 'Unassigned'}
-                                    </td>
-                                    {user.role === 'admin' && (
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button onClick={() => openEdit(lead)} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                                                <Edit className="h-4 w-4" />
-                                            </button>
-                                            <button onClick={() => handleDelete(lead._id)} className="text-red-600 hover:text-red-900">
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </td>
-                                    )}
+            <Table
+                columns={columns}
+                data={leads}
+                isLoading={isLoading}
+                pagination={{
+                    currentPage: page,
+                    totalPages: totalPages,
+                    onPageChange: handlePageChange
+                }}
+                emptyMessage="No leads found"
+            />
 
-                                </tr>
+            {/* View Details Modal */}
+            <DynamicViewModal
+                isOpen={!!viewingId}
+                onClose={() => setViewingId(null)}
+                title={viewingLead?.name || 'Lead Details'}
+                data={viewingLead}
+                columns={viewConfig}
+            >
+                {viewingLead && (
+                    <div className="border-t border-gray-200 pt-6">
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Notes</h3>
+                        <div className="space-y-4 mb-6 max-h-60 overflow-y-auto">
+                            {viewingLead.notes?.map((note, index) => (
+                                <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                                    <p className="text-sm text-gray-900">{note.text}</p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {new Date(note.createdAt).toLocaleString()}
+                                    </p>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
-                    {leads.length === 0 && <div className="p-4 text-center text-gray-500">No leads found</div>}
-                </div>
-            )}
+                            {(!viewingLead.notes || viewingLead.notes.length === 0) && (
+                                <p className="text-sm text-gray-500 italic">No notes yet.</p>
+                            )}
+                        </div>
+
+                        <form onSubmit={handleAddNote} className="flex gap-2">
+                            <Input
+                                value={newNote}
+                                onChange={(e) => setNewNote(e.target.value)}
+                                placeholder="Add a note..."
+                                className="flex-1"
+                            />
+                            <Button type="submit">
+                                <Send className="h-4 w-4" />
+                            </Button>
+                        </form>
+                    </div>
+                )}
+            </DynamicViewModal>
 
             {/* Formik Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md bg-white rounded-lg p-6 space-y-4">
-                        <h2 className="text-xl font-bold">{editingId ? 'Edit Lead' : 'New Lead'}</h2>
-                        <form onSubmit={formik.handleSubmit} className="space-y-4">
-                            <div>
-                                <Input
-                                    name="name"
-                                    placeholder="Name"
-                                    onChange={formik.handleChange}
-                                    onBlur={formik.handleBlur}
-                                    value={formik.values.name}
-                                    className={formik.touched.name && formik.errors.name ? 'border-red-500' : ''}
-                                />
-                                {formik.touched.name && formik.errors.name && (
-                                    <div className="text-red-500 text-xs mt-1">{formik.errors.name}</div>
-                                )}
-                            </div>
-
-                            <div>
-                                <Input
-                                    name="email"
-                                    placeholder="Email"
-                                    type="email"
-                                    onChange={formik.handleChange}
-                                    onBlur={formik.handleBlur}
-                                    value={formik.values.email}
-                                    className={formik.touched.email && formik.errors.email ? 'border-red-500' : ''}
-                                />
-                                {formik.touched.email && formik.errors.email && (
-                                    <div className="text-red-500 text-xs mt-1">{formik.errors.email}</div>
-                                )}
-                            </div>
-
-                            <div>
-                                <Input
-                                    name="phone"
-                                    placeholder="Phone"
-                                    onChange={formik.handleChange}
-                                    onBlur={formik.handleBlur}
-                                    value={formik.values.phone}
-                                    className={formik.touched.phone && formik.errors.phone ? 'border-red-500' : ''}
-                                />
-                                {formik.touched.phone && formik.errors.phone && (
-                                    <div className="text-red-500 text-xs mt-1">{formik.errors.phone}</div>
-                                )}
-                            </div>
-
-                            <div>
-                                <select
-                                    name="status"
-                                    className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                                    value={formik.values.status}
-                                    onChange={formik.handleChange}
-                                    onBlur={formik.handleBlur}
-                                >
-                                    <option value="New">New</option>
-                                    <option value="Contacted">Contacted</option>
-                                    <option value="Qualified">Qualified</option>
-                                    <option value="Lost">Lost</option>
-                                    <option value="Closed">Closed</option>
-                                </select>
-                            </div>
-
-                            {user.role === 'admin' && (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">Assign To Staff</label>
-                                    <select
-                                        name="assignedTo"
-                                        className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                                        value={formik.values.assignedTo}
-                                        onChange={formik.handleChange}
-                                        onBlur={formik.handleBlur}
-                                    >
-                                        <option value="">Unassigned</option>
-                                        {staffList.map(staff => (
-                                            <option key={staff._id} value={staff._id}>
-                                                {staff.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end space-x-2">
-                                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                                <Button type="submit" isLoading={formik.isSubmitting}>{editingId ? 'Update' : 'Create'}</Button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                <DynamicFormModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    title={editingId ? 'Edit Lead' : 'New Lead'}
+                    initialValues={modalInitialValues}
+                    validationSchema={LeadSchema}
+                    onSubmit={handleFormSubmit}
+                    fields={formFields}
+                    isEdit={!!editingId}
+                />
             )}
         </div>
     );

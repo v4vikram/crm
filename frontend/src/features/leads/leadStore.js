@@ -76,6 +76,28 @@ const useLeadStore = create((set, get) => ({
             });
             throw error;
         }
+    },
+
+    addNote: async (id, text) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.post(`/leads/${id}/notes`, { text });
+            // Response contains: { message: '...', notes: [...] }
+            // We need to update the lead's notes in the local state
+            set((state) => ({
+                leads: state.leads.map(l =>
+                    l._id === id ? { ...l, notes: response.data.notes } : l
+                ),
+                isLoading: false
+            }));
+            return response.data;
+        } catch (error) {
+            set({
+                error: error.response?.data?.message || 'Failed to add note',
+                isLoading: false
+            });
+            throw error;
+        }
     }
 }));
 
