@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const authService = require('../services/auth.service');
+const config = require('../config');
 
 // @desc Register user
 // @route POST /api/auth/register
@@ -14,8 +15,55 @@ const register = asyncHandler(async (req, res) => {
 // @access Public
 const login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    const user = await authService.loginUser(email, password);
-    res.json(user);
+
+    const { user, token } = await authService.loginUser(email, password);
+
+    // Set HTTP-only cookie
+    res.cookie('access_token', token, {
+        httpOnly: true,
+        secure: config.env === 'production',
+        sameSite: 'strict',
+        maxAge: config.accessTokenMaxAge,
+    });
+
+    res.status(200).json({
+        success: true,
+        user,
+    });
 });
 
-module.exports = { register, login };
+
+// @desc    Get logged-in user
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = asyncHandler(async (req, res) => {
+    res.status(200).json({
+        success: true,
+        user: {
+            id: req.user._id,
+            name: req.user.name,
+            email: req.user.email,
+            role: req.user.role,
+        },
+    });
+});
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+const logout = asyncHandler(async (req, res) => {
+    res.clearCookie('access_token', {
+        httpOnly: true,
+        secure: config.env === 'production',
+        sameSite: 'strict',
+    });
+
+    res.status(200).json({
+        success: true,
+        message: 'Logged out successfully',
+    });
+});
+
+
+
+module.exports = { register, login, getMe, logout };
