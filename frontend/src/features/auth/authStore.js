@@ -1,62 +1,78 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 import api from '../../lib/axios';
 
 const useAuthStore = create((set) => ({
-    user: JSON.parse(localStorage.getItem('user')) || null,
-    isAuthenticated: !!localStorage.getItem('token'),
+    user: null,
+    isAuthenticated: false,
     isLoading: false,
     error: null,
 
+    // 🔐 LOGIN
     login: async (email, password) => {
         set({ isLoading: true, error: null });
-        try {
-            const response = await api.post('/auth/login', { email, password });
-            const { token, ...user } = response.data;
 
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
+        try {
+            const res = await api.post("/auth/login", { email, password });
 
             set({
-                user,
+                user: res.data.user,
                 isAuthenticated: true,
-                isLoading: false
+                isLoading: false,
             });
         } catch (error) {
             set({
-                error: error.response?.data?.message || 'Login failed',
-                isLoading: false
+                error: error.response?.data?.message || "Login failed",
+                isLoading: false,
             });
             throw error;
         }
     },
 
+    // 📝 REGISTER
     register: async (name, email, password) => {
         set({ isLoading: true, error: null });
-        try {
-            const response = await api.post('/auth/register', { name, email, password });
-            const { token, ...user } = response.data;
 
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
+        try {
+            const res = await api.post("/auth/register", {
+                name,
+                email,
+                password,
+            });
 
             set({
-                user,
+                user: res.data.user,
                 isAuthenticated: true,
-                isLoading: false
+                isLoading: false,
             });
         } catch (error) {
             set({
-                error: error.response?.data?.message || 'Registration failed',
-                isLoading: false
+                error: error.response?.data?.message || "Registration failed",
+                isLoading: false,
             });
             throw error;
         }
     },
 
-    logout: () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    // 🚪 LOGOUT
+    logout: async () => {
+        await api.post("/auth/logout"); // clears cookie on backend
         set({ user: null, isAuthenticated: false });
+    },
+
+    // 🔁 CHECK AUTH (IMPORTANT ON REFRESH)
+    checkAuth: async () => {
+        try {
+            const res = await api.get("/auth/me"); // protected route
+            set({
+                user: res.data.user,
+                isAuthenticated: true,
+            });
+        } catch {
+            set({
+                user: null,
+                isAuthenticated: false,
+            });
+        }
     },
 }));
 

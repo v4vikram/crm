@@ -4,11 +4,15 @@ import Login from './pages/Login';
 import Layout from './layout/Layout';
 import Leads from './pages/Leads';
 import useAuthStore from './features/auth/authStore';
-
+import { useEffect } from 'react';
 import Staff from './pages/Staff';
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   return (
     <BrowserRouter>
