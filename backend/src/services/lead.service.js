@@ -18,7 +18,7 @@ const createLead = async (leadData, userId) => {
 
 // GET ALL LEADS (Pagination + Search + Role-based)
 const getLeads = async (query, user) => {
-    const { page = 1, limit = 10, search } = query;
+    const { page = 1, limit = 2, search } = query;
 
     const skip = (page - 1) * limit;
     const filter = {};

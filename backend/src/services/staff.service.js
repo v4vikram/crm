@@ -44,7 +44,7 @@ const getAllStaff = async () => {
  */
 const getStaffById = async (id) => {
     const staff = await User.findOne({ _id: id, role: 'staff' }).select(
-        '_id name email role createdAt'
+        '_id name email role createdAt password'
     );
 
     if (!staff) {

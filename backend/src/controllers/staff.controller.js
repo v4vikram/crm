@@ -38,6 +38,7 @@ const getStaffById = asyncHandler(async (req, res) => {
  */
 const updateStaff = asyncHandler(async (req, res) => {
     const staff = await staffService.updateStaff(req.params.id, req.body);
+    console.log(":staff", staff)
     res.json(staff);
 });
 
