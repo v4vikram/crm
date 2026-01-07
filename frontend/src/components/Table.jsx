@@ -69,7 +69,7 @@ const Table = ({
 
             {/* Pagination */}
             {pagination && (
-                <div className="flex items-center justify-between border-t border-gray-200 py-3 mt-4">
+                <div className="flex items-center justify-between py-3">
                     <div className="flex flex-1 justify-between sm:hidden">
                         <Button
                             variant="outline"

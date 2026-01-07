@@ -3,7 +3,7 @@ import useLeadStore from '../features/leads/leadStore';
 import useAuthStore from '../features/auth/authStore';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Plus, Trash2, Edit, Search, Eye, Send } from 'lucide-react';
+import { Plus, Trash2, Edit, Search, Eye, Send, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { LeadSchema } from '../lib/validation';
@@ -12,6 +12,7 @@ import SearchBar from '../components/SearchBar';
 import Table from '../components/Table';
 import DynamicFormModal from '../components/DynamicFormModal';
 import DynamicViewModal from '../components/DynamicViewModal';
+import PageHeader from '../components/PageHeader';
 
 const Leads = () => {
     const { leads, fetchLeads, isLoading, deleteLead, createLead, updateLead, page, totalPages, addNote } = useLeadStore();
@@ -229,16 +230,15 @@ const Leads = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-                {user.role === 'admin' && (
-                    <Button onClick={openNew}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Lead
-                    </Button>
-                )}
-
-            </div>
+            <PageHeader
+                title="Leads"
+                icon={Users}
+                buttonText="Add Lead"
+                buttonIcon={Plus}
+                onButtonClick={openNew}
+                currentUser={user}
+                allowedRoles={["admin"]}
+            />
 
             <div className="flex items-center space-x-4">
                 <SearchBar search={search} setSearch={setSearch} />

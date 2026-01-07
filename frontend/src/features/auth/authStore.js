@@ -1,19 +1,17 @@
 import { create } from "zustand";
-import api from '../../lib/axios';
+import api from "../../lib/axios";
 
 const useAuthStore = create((set) => ({
     user: null,
     isAuthenticated: false,
-    isLoading: false,
+    isLoading: true, // ✅ IMPORTANT
     error: null,
 
     // 🔐 LOGIN
     login: async (email, password) => {
         set({ isLoading: true, error: null });
-
         try {
             const res = await api.post("/auth/login", { email, password });
-
             set({
                 user: res.data.user,
                 isAuthenticated: true,
@@ -31,14 +29,8 @@ const useAuthStore = create((set) => ({
     // 📝 REGISTER
     register: async (name, email, password) => {
         set({ isLoading: true, error: null });
-
         try {
-            const res = await api.post("/auth/register", {
-                name,
-                email,
-                password,
-            });
-
+            const res = await api.post("/auth/register", { name, email, password });
             set({
                 user: res.data.user,
                 isAuthenticated: true,
@@ -55,22 +47,28 @@ const useAuthStore = create((set) => ({
 
     // 🚪 LOGOUT
     logout: async () => {
-        await api.post("/auth/logout"); // clears cookie on backend
-        set({ user: null, isAuthenticated: false });
+        await api.post("/auth/logout");
+        set({
+            user: null,
+            isAuthenticated: false,
+        });
     },
 
-    // 🔁 CHECK AUTH (IMPORTANT ON REFRESH)
+    // 🔁 CHECK AUTH (ON REFRESH)
     checkAuth: async () => {
+        set({ isLoading: true });
         try {
-            const res = await api.get("/auth/me"); // protected route
+            const res = await api.get("/auth/me");
             set({
                 user: res.data.user,
                 isAuthenticated: true,
+                isLoading: false,
             });
         } catch {
             set({
                 user: null,
                 isAuthenticated: false,
+                isLoading: false,
             });
         }
     },
