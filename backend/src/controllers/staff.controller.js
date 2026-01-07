@@ -17,7 +17,7 @@ const createStaff = asyncHandler(async (req, res) => {
  * @access  Admin
  */
 const getAllStaff = asyncHandler(async (req, res) => {
-    const staff = await staffService.getAllStaff();
+    const staff = await staffService.getAllStaff(req.query);
     res.json(staff);
 });
 
@@ -38,7 +38,6 @@ const getStaffById = asyncHandler(async (req, res) => {
  */
 const updateStaff = asyncHandler(async (req, res) => {
     const staff = await staffService.updateStaff(req.params.id, req.body);
-    console.log(":staff", staff)
     res.json(staff);
 });
 

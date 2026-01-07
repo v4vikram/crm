@@ -33,10 +33,32 @@ const createStaff = async ({ name, email, password }) => {
 /**
  * Get all staff (Admin only)
  */
-const getAllStaff = async () => {
-    return User.find({ role: 'staff' }).select(
-        '_id name email role createdAt updatedAt'
-    );
+const getAllStaff = async (query) => {
+    const { page = 1, limit = 10, search } = query;
+    const skip = (page - 1) * limit;
+    const filter = { role: 'staff' };
+
+    if (search) {
+        filter.$or = [
+            { name: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+        ];
+    }
+
+    const staff = await User.find(filter)
+        .select('_id name email role createdAt updatedAt')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    const total = await User.countDocuments(filter);
+
+    return {
+        staff,
+        page: Number(page),
+        pages: Math.ceil(total / limit),
+        total,
+    };
 };
 
 /**
