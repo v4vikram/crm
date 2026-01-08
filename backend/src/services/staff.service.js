@@ -96,7 +96,7 @@ const updateStaff = async (id, data) => {
     await staff.save();
 
     return {
-        id: staff._id,
+        _id: staff._id,
         name: staff.name,
         email: staff.email,
         role: staff.role,
