@@ -10,6 +10,8 @@ import { StaffSchema } from "../lib/validation";
 import { Navigate } from "react-router-dom";
 import Table from "../components/Table";
 import PageHeader from "../components/PageHeader";
+import DynamicFormModal from "../components/DynamicFormModal";
+import SearchBar from "../components/SearchBar";
 
 const Staff = () => {
   const { user } = useAuthStore();
@@ -26,6 +28,7 @@ const Staff = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [modalInitialValues, setModalInitialValues] = useState(null);
 
   // Protect route - Admin only
   if (user && user.role !== "admin") {
@@ -33,41 +36,25 @@ const Staff = () => {
   }
 
   useEffect(() => {
-    fetchStaff();
-  }, []);
+    fetchStaff({ search });
+  }, [fetchStaff, search]);
 
-  const formik = useFormik({
-    initialValues: {
-      name: "",
-      email: "",
-      password: "",
-      isEditing: false,
-    },
-    validationSchema: StaffSchema,
-    onSubmit: async (values, { resetForm }) => {
-      try {
-        const submitValues = { ...values };
-        if (submitValues.isEditing && !submitValues.password) {
-          delete submitValues.password; // Don't send empty password on update
-        }
-        // Remove helper field
-        delete submitValues.isEditing;
-
-        if (editingId) {
-          await updateStaff(editingId, submitValues);
-          toast.success("Staff member updated");
-        } else {
-          await createStaff(submitValues);
-          toast.success("Staff member created");
-        }
-        setIsModalOpen(false);
-        resetForm();
-        setEditingId(null);
-      } catch (error) {
-        toast.error(editingId ? "Failed to update" : "Failed to create");
+  const handleFormSubmit = async (values, { resetForm }) => {
+    try {
+      if (editingId) {
+        await updateStaff(editingId, values);
+        toast.success("Staff updated");
+      } else {
+        await createStaff(values);
+        toast.success("Staff created");
       }
-    },
-  });
+      setIsModalOpen(false);
+      resetForm();
+      setEditingId(null);
+    } catch (error) {
+      toast.error(editingId ? "Failed to update" : "Failed to create");
+    }
+  };
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure? This action cannot be undone.")) {
@@ -81,10 +68,10 @@ const Staff = () => {
   };
 
   const openEdit = (staffMember) => {
-    formik.setValues({
+    setModalInitialValues({
       name: staffMember.name,
       email: staffMember.email,
-      password: "",
+      password: staffMember.password,
       isEditing: true,
     });
     setEditingId(staffMember._id);
@@ -98,13 +85,11 @@ const Staff = () => {
   };
 
   const openNew = () => {
-    formik.resetForm({
-      values: {
-        name: "",
-        email: "",
-        password: "",
-        isEditing: false,
-      },
+    setModalInitialValues({
+      name: "",
+      email: "",
+      password: "",
+      isEditing: false,
     });
     setEditingId(null);
     setIsModalOpen(true);
@@ -163,6 +148,23 @@ const Staff = () => {
       ),
     },
   ];
+  const formFields = [
+    {
+      name: "name",
+      placeholder: "Name",
+    },
+    {
+      name: "email",
+      type: "email",
+      placeholder: "Email",
+    },
+    {
+      name: "password",
+      type: "password",
+      placeholder: "Password",
+      editPlaceholder: "New Password (optional)",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -173,7 +175,7 @@ const Staff = () => {
         buttonIcon={Plus}
         onButtonClick={openNew}
       />
-
+      <SearchBar search={search} setSearch={setSearch} />
       <Table
         columns={columns}
         data={staff}
@@ -188,91 +190,16 @@ const Staff = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md bg-white rounded-lg p-6 space-y-4">
-            <h2 className="text-xl font-bold">
-              {editingId ? "Edit Staff" : "New Staff"}
-            </h2>
-            <form onSubmit={formik.handleSubmit} className="space-y-4">
-              <div>
-                <Input
-                  name="name"
-                  placeholder="Name"
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  value={formik.values.name}
-                  className={
-                    formik.touched.name && formik.errors.name
-                      ? "border-red-500"
-                      : ""
-                  }
-                />
-                {formik.touched.name && formik.errors.name && (
-                  <div className="text-red-500 text-xs mt-1">
-                    {formik.errors.name}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <Input
-                  name="email"
-                  placeholder="Email"
-                  type="email"
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  value={formik.values.email}
-                  className={
-                    formik.touched.email && formik.errors.email
-                      ? "border-red-500"
-                      : ""
-                  }
-                />
-                {formik.touched.email && formik.errors.email && (
-                  <div className="text-red-500 text-xs mt-1">
-                    {formik.errors.email}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <Input
-                  name="password"
-                  placeholder={
-                    editingId ? "New Password (optional)" : "Password"
-                  }
-                  type="password"
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  value={formik.values.password}
-                  className={
-                    formik.touched.password && formik.errors.password
-                      ? "border-red-500"
-                      : ""
-                  }
-                />
-                {formik.touched.password && formik.errors.password && (
-                  <div className="text-red-500 text-xs mt-1">
-                    {formik.errors.password}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" isLoading={formik.isSubmitting}>
-                  {editingId ? "Update" : "Create"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <DynamicFormModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title={editingId ? "Edit Staff" : "New Staff"}
+          initialValues={modalInitialValues}
+          validationSchema={StaffSchema}
+          onSubmit={handleFormSubmit}
+          fields={formFields}
+          isEdit={!!editingId}
+        />
       )}
     </div>
   );
