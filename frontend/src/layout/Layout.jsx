@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import useAuthStore from "../features/auth/authStore";
 import {
@@ -13,9 +13,14 @@ import { FullPageLoader } from "../components/Loaders";
 import ProfileDropdown from "../components/ProfileDropdown";
 
 const ProtectedRoute = () => {
+  const [isOpenSidebar, setIsOpenSidebar] = useState(true);
   const { isAuthenticated, isLoading, user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const toggleSidebar = () => {
+    setIsOpenSidebar(!isOpenSidebar);
+  };
 
   if (isLoading) {
     return <FullPageLoader />;
@@ -30,7 +35,9 @@ const ProtectedRoute = () => {
   return (
     <div className="bg-gray-100 flex">
       {/* Sidebar / Navigation */}
-      <div className="h-screen w-64 sticky top-0 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200">
+      <div
+        className={`transition-all duration-200 ease-in-out overflow-hidden ${isOpenSidebar ? "w-64" : "w-0"} h-screen sticky top-0 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200`}
+      >
         <div className="flex h-16 items-center justify-center border-b border-gray-200 bg-white px-4">
           <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
             CRMaster
@@ -110,7 +117,7 @@ const ProtectedRoute = () => {
       {/* Main Content */}
       <div className="flex-1">
         <header className="h-16 bg-white border-b border-gray-200 sticky top-0 flex justify-between items-center z-10">
-          <button className="px-4 cursor-pointer">
+          <button className="px-4 cursor-pointer" onClick={toggleSidebar}>
             <SquareArrowLeft className="text-blue-600" />
           </button>
 
