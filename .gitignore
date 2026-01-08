@@ -25,3 +25,6 @@ dist-ssr
 
 HELP.md
 INTERVIEW.md
+.env
+.env.production
+.env.development
