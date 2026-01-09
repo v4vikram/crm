@@ -22,7 +22,7 @@ const login = asyncHandler(async (req, res) => {
   res.cookie("access_token", token, {
     httpOnly: true,
     secure: true,
-    sameSite: "strict",
+    sameSite: "none",
     maxAge: config.accessTokenMaxAge,
   });
 
@@ -54,7 +54,7 @@ const logout = asyncHandler(async (req, res) => {
   res.clearCookie("access_token", {
     httpOnly: true,
     secure: true,
-    sameSite: "strict",
+    sameSite: "none",
   });
 
   res.status(200).json({
