@@ -60,10 +60,10 @@ const Leads = () => {
   }, [fetchLeads, search]);
 
   useEffect(() => {
-    if (user.role === "admin") {
+    if (user?.role === "admin") {
       fetchStaff();
     }
-  }, [user.role]);
+  }, [user?.role]);
 
   const handleFormSubmit = async (values, { resetForm }) => {
     try {
@@ -176,7 +176,7 @@ const Leads = () => {
           >
             <Eye className="h-4 w-4" />
           </button>
-          {user.role === "admin" && (
+          {user?.role === "admin" && (
             <>
               <button
                 onClick={() => openEdit(lead)}
@@ -216,7 +216,7 @@ const Leads = () => {
     },
   ];
 
-  if (user.role === "admin") {
+  if (user?.role === "admin") {
     formFields.push({
       name: "assignedTo",
       label: "Assign To Staff",

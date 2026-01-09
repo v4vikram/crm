@@ -17,6 +17,7 @@ const ProtectedRoute = () => {
   const { isAuthenticated, isLoading, user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  console.log("isAuthenticated", isAuthenticated);
 
   const toggleSidebar = () => {
     setIsOpenSidebar(!isOpenSidebar);
